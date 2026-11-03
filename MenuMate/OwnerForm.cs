@@ -46,6 +46,10 @@ namespace MenuMate
         private System.Windows.Forms.Timer refreshTimer = new System.Windows.Forms.Timer();
         private bool isRefreshing = false;   // true while a refresh is running, so two never overlap
 
+        // Sales tab (A4)
+        private Label ordersCountLabel = new Label();
+        private Label salesTotalLabel = new Label();
+
         public OwnerForm(User user)
         {
             InitializeComponent();
@@ -113,7 +117,7 @@ namespace MenuMate
             {
                 ReloadGrid();
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 MessageBox.Show("Couldn't load the menu. Please try again.", "MenuMate",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -198,15 +202,23 @@ namespace MenuMate
             TabPage kitchenPage = NewPage("Kitchen Board");
             TabPage salesPage = NewPage("Sales");
 
-            // Placeholder until task A4
-            salesPage.Controls.Add(PlaceholderLabel());
-
             BuildMenuItemsTab(menuPage);
             BuildKitchenTab(kitchenPage);
+            BuildSalesTab(salesPage);
 
             tabs.TabPages.Add(menuPage);
             tabs.TabPages.Add(kitchenPage);
             tabs.TabPages.Add(salesPage);
+
+            // Reload the sales numbers every time the Sales tab is opened.
+            tabs.SelectedIndexChanged += (s, e) =>
+            {
+                if (tabs.SelectedTab == salesPage)
+                {
+                    LoadSales();
+                }
+            };
+
             this.Controls.Add(tabs);
         }
 
@@ -428,6 +440,98 @@ namespace MenuMate
         }
 
         // =====================================================================
+        // Sales tab (A4)
+        // =====================================================================
+        private void BuildSalesTab(TabPage page)
+        {
+            ordersCountLabel.Text = "0";
+            salesTotalLabel.Text = "$0.00";
+
+            // Two cards side by side
+            TableLayoutPanel cards = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 170,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            cards.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            cards.Controls.Add(MakeSalesCard("Today's orders", ordersCountLabel, new Padding(0, 0, 12, 0)), 0, 0);
+            cards.Controls.Add(MakeSalesCard("Today's sales", salesTotalLabel, new Padding(0)), 1, 0);
+
+            Button refreshButton = MakeButton("Refresh", 0, 0, Orange, Color.White, Color.Empty, OrangeDark, true);
+            refreshButton.Width = 160;
+            refreshButton.Dock = DockStyle.Left;
+            refreshButton.Click += (s, e) => LoadSales();
+
+            Panel buttonRow = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 64,
+                Padding = new Padding(0, 16, 0, 0)
+            };
+            buttonRow.Controls.Add(refreshButton);
+
+            // The control added last sits at the very top.
+            page.Controls.Add(buttonRow);
+            page.Controls.Add(cards);
+        }
+
+        // One white card: small title on top, big bold number below.
+        private Panel MakeSalesCard(string title, Label bigNumber, Padding margin)
+        {
+            Panel card = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(24, 18, 18, 18),
+                Margin = margin
+            };
+
+            Label titleLabel = new Label
+            {
+                Text = title,
+                Dock = DockStyle.Top,
+                Height = 30,
+                Font = new Font("Segoe UI", 11f),
+                ForeColor = Muted,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            bigNumber.Dock = DockStyle.Fill;
+            bigNumber.Font = new Font("Segoe UI", 24f, FontStyle.Bold);
+            bigNumber.ForeColor = Green;
+            bigNumber.TextAlign = ContentAlignment.MiddleLeft;
+
+            // Fill first, then Top
+            card.Controls.Add(bigNumber);
+            card.Controls.Add(titleLabel);
+            return card;
+        }
+
+        // Counts the orders placed today (any status) and adds up their totals.
+        private void LoadSales()
+        {
+            try
+            {
+                List<Order> orders = dataManager.LoadOrders();
+                DateTime today = DateTime.Today;
+
+                List<Order> todays = orders.Where(o => o.Date.Date == today).ToList();
+                decimal total = todays.Sum(o => o.Total);
+
+                ordersCountLabel.Text = todays.Count.ToString(CultureInfo.InvariantCulture);
+                salesTotalLabel.Text = "$" + total.ToString("0.00", CultureInfo.InvariantCulture);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                ShowWarning("Couldn't load sales. Please try again.");
+            }
+        }
+
+        // =====================================================================
         // Menu Items tab (A2)
         // =====================================================================
         private void BuildMenuItemsTab(TabPage page)
@@ -503,6 +607,7 @@ namespace MenuMate
 
             nameBox.Location = new Point(20, 118);
             nameBox.Width = 300;
+            nameBox.MaxLength = 40;
 
             categoryBox.Location = new Point(20, 182);
             categoryBox.Width = 300;
@@ -701,7 +806,7 @@ namespace MenuMate
                 dataManager.SaveMenu(menu);
                 ReloadGrid();
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 ShowWarning("Couldn't save the menu. Please try again.");
             }
@@ -754,7 +859,7 @@ namespace MenuMate
                 dataManager.SaveMenu(menu);
                 ReloadGrid();
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 ShowWarning("Couldn't save the menu. Please try again.");
             }
@@ -786,7 +891,7 @@ namespace MenuMate
                 dataManager.SaveMenu(menu);
                 ReloadGrid();
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 ShowWarning("Couldn't save the menu. Please try again.");
             }
@@ -829,18 +934,6 @@ namespace MenuMate
                 BackColor = Cream,
                 UseVisualStyleBackColor = false,
                 Padding = new Padding(16)
-            };
-        }
-
-        private Label PlaceholderLabel()
-        {
-            return new Label
-            {
-                Text = "Coming soon",
-                AutoSize = true,
-                ForeColor = Muted,
-                Font = new Font("Segoe UI", 12f),
-                Location = new Point(24, 24)
             };
         }
 
