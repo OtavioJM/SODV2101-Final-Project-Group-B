@@ -24,18 +24,27 @@ namespace MenuMate
 
         // Controls we need to reach from different methods
         private TabControl tabs = new TabControl();
+
+        // Menu Items tab (A2)
         private DataGridView menuGrid = new DataGridView();
         private Label countLabel = new Label();
         private TextBox nameBox = new TextBox();
         private ComboBox categoryBox = new ComboBox();
         private NumericUpDown priceBox = new NumericUpDown();
         private NumericUpDown prepBox = new NumericUpDown();
-
-        // The menu items currently shown in the grid (row number = position in this list)
         private List<MenuItem> shownMenu = new List<MenuItem>();
+        private string? selectedName = null;   // name of the item the owner clicked (null = nothing selected)
 
-        // Name of the item the owner clicked (null = nothing selected)
-        private string? selectedName = null;
+        // Kitchen Board tab (A3)
+        private Kitchen kitchen = new Kitchen();
+        private ListBox receivedList = new ListBox();
+        private ListBox preparingList = new ListBox();
+        private ListBox readyList = new ListBox();
+        private Label receivedTitle = new Label();
+        private Label preparingTitle = new Label();
+        private Label readyTitle = new Label();
+        private System.Windows.Forms.Timer refreshTimer = new System.Windows.Forms.Timer();
+        private bool isRefreshing = false;   // true while a refresh is running, so two never overlap
 
         public OwnerForm(User user)
         {
@@ -43,6 +52,29 @@ namespace MenuMate
             currentUser = user;
             this.Icon = Icon.FromHandle(Properties.Resources.logo.GetHicon());
             BuildUi();
+        }
+
+        // One row in a Kitchen Board list. The ListBox shows ToString() and we keep the Order inside.
+        private class OrderRow
+        {
+            public Order Order { get; }
+
+            public OrderRow(Order order)
+            {
+                Order = order;
+            }
+
+            // Example: "#1003 · tom · Takeaway · 2 x Latte, 1 x Muffin"
+            public override string ToString()
+            {
+                List<string> parts = new List<string>();
+                foreach (CartItem item in Order.Items)
+                {
+                    parts.Add(item.Quantity + " x " + item.Item.Name);
+                }
+                return "#" + Order.OrderNumber + " · " + Order.CustomerName + " · " + Order.Type
+                    + " · " + string.Join(", ", parts);
+            }
         }
 
         // ===== Build the window =====
@@ -61,11 +93,21 @@ namespace MenuMate
             BuildHeader();
 
             // Windows selects the first row when the window appears, so clear it once the window is shown.
-            this.Shown += (s, e) =>
+            // The Kitchen Board refreshes once now, then the timer refreshes it every 3 seconds.
+            this.Shown += async (s, e) =>
             {
                 menuGrid.ClearSelection();
                 menuGrid.CurrentCell = null;
+
+                await RefreshBoardAsync();
+                refreshTimer.Start();
             };
+
+            // Stop the timer when the window closes.
+            this.FormClosing += (s, e) => refreshTimer.Stop();
+
+            refreshTimer.Interval = 3000;
+            refreshTimer.Tick += async (s, e) => await RefreshBoardAsync();
 
             try
             {
@@ -156,11 +198,11 @@ namespace MenuMate
             TabPage kitchenPage = NewPage("Kitchen Board");
             TabPage salesPage = NewPage("Sales");
 
-            // Placeholders until tasks A3 and A4
-            kitchenPage.Controls.Add(PlaceholderLabel());
+            // Placeholder until task A4
             salesPage.Controls.Add(PlaceholderLabel());
 
             BuildMenuItemsTab(menuPage);
+            BuildKitchenTab(kitchenPage);
 
             tabs.TabPages.Add(menuPage);
             tabs.TabPages.Add(kitchenPage);
@@ -194,7 +236,200 @@ namespace MenuMate
             }
         }
 
-        // ===== Menu Items tab =====
+        // =====================================================================
+        // Kitchen Board tab (A3)
+        // =====================================================================
+        private void BuildKitchenTab(TabPage page)
+        {
+            // Three equal columns
+            TableLayoutPanel layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 1
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            layout.Controls.Add(BuildStageColumn(receivedList, receivedTitle, "Received (0)",
+                "Start preparing", "Received", new Padding(0, 0, 12, 0)), 0, 0);
+            layout.Controls.Add(BuildStageColumn(preparingList, preparingTitle, "Preparing (0)",
+                "Mark as Ready", "Preparing", new Padding(0, 0, 12, 0)), 1, 0);
+            layout.Controls.Add(BuildStageColumn(readyList, readyTitle, "Ready (0)",
+                "Mark as Picked up", "Ready", new Padding(0)), 2, 0);
+
+            page.Controls.Add(layout);
+        }
+
+        // One white card: title on top, the list in the middle, the orange button at the bottom.
+        private Panel BuildStageColumn(ListBox list, Label title, string titleText,
+            string buttonText, string stage, Padding margin)
+        {
+            Panel card = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Padding = new Padding(16),
+                Margin = margin
+            };
+
+            title.Text = titleText;
+            title.Dock = DockStyle.Top;
+            title.Height = 38;
+            title.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
+            title.ForeColor = DarkText;
+            title.TextAlign = ContentAlignment.MiddleLeft;
+
+            list.Dock = DockStyle.Fill;
+            list.BorderStyle = BorderStyle.None;
+            list.BackColor = Color.White;
+            list.DrawMode = DrawMode.OwnerDrawFixed;
+            list.ItemHeight = 64;
+            list.IntegralHeight = false;
+            list.DrawItem += OrderList_DrawItem;
+
+            Button stageButton = MakeButton(buttonText, 0, 0, Orange, Color.White, Color.Empty, OrangeDark, true);
+            stageButton.Dock = DockStyle.Fill;
+            stageButton.Click += (s, e) => MoveSelectedOrder(list, stage);
+
+            // The button sits in its own strip with a little space above it.
+            Panel buttonStrip = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 56,
+                Padding = new Padding(0, 12, 0, 0)
+            };
+            buttonStrip.Controls.Add(stageButton);
+
+            // Fill first, then Bottom, then Top
+            card.Controls.Add(list);
+            card.Controls.Add(buttonStrip);
+            card.Controls.Add(title);
+            return card;
+        }
+
+        // Draws one order: soft green when selected, striped otherwise, text wraps over two or three lines.
+        private void OrderList_DrawItem(object? sender, DrawItemEventArgs e)
+        {
+            if (sender is not ListBox list || e.Index < 0)
+            {
+                return;
+            }
+
+            bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+            Color back = selected ? SelectGreen : (e.Index % 2 == 0 ? Color.White : RowAlt);
+
+            using (SolidBrush brush = new SolidBrush(back))
+            {
+                e.Graphics.FillRectangle(brush, e.Bounds);
+            }
+
+            Rectangle textArea = new Rectangle(e.Bounds.X + 10, e.Bounds.Y + 4, e.Bounds.Width - 20, e.Bounds.Height - 8);
+            string text = list.Items[e.Index].ToString() ?? "";
+            TextRenderer.DrawText(e.Graphics, text, list.Font, textArea, DarkText,
+                TextFormatFlags.WordBreak | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
+        }
+
+        // The orange button was clicked: move the selected order one stage forward.
+        private async void MoveSelectedOrder(ListBox list, string stage)
+        {
+            if (list.SelectedItem is not OrderRow row)
+            {
+                ShowWarning("Select an order first.");
+                return;
+            }
+
+            try
+            {
+                // Always work on the freshest data from the file, not on what is on screen.
+                List<Order> orders = dataManager.LoadOrders();
+                Order? order = orders.FirstOrDefault(o => o.OrderNumber == row.Order.OrderNumber);
+
+                // Only move it if nobody has moved it already (for example, a second copy of the app).
+                if (order != null && order.Status == stage)
+                {
+                    order.MoveToNextStage();
+                    dataManager.SaveOrders(orders);
+                }
+
+                await RefreshBoardAsync();
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                ShowWarning("Couldn't update the order. Please try again.");
+            }
+        }
+
+        // Reloads the orders in the background and rebuilds the three lists.
+        private async Task RefreshBoardAsync()
+        {
+            // Never run two refreshes at the same time.
+            if (isRefreshing)
+            {
+                return;
+            }
+            isRefreshing = true;
+
+            try
+            {
+                List<Order>? orders = await dataManager.LoadOrdersAsync();
+
+                // The window may have been closed while we were waiting.
+                if (this.IsDisposed)
+                {
+                    return;
+                }
+
+                // null = the file was busy, so skip this refresh and try again at the next tick.
+                if (orders == null)
+                {
+                    return;
+                }
+
+                kitchen = new Kitchen { Orders = orders };
+
+                FillList(receivedList, receivedTitle, "Received");
+                FillList(preparingList, preparingTitle, "Preparing");
+                FillList(readyList, readyTitle, "Ready");
+            }
+            finally
+            {
+                isRefreshing = false;
+            }
+        }
+
+        // Fills one list with the orders at a stage and keeps the same order selected.
+        private void FillList(ListBox list, Label title, string stage)
+        {
+            int? selectedNumber = (list.SelectedItem as OrderRow)?.Order.OrderNumber;
+            int oldTopIndex = list.TopIndex;
+
+            List<Order> orders = kitchen.GetOrdersAt(stage);
+
+            list.BeginUpdate();
+            list.Items.Clear();
+            foreach (Order order in orders)
+            {
+                int position = list.Items.Add(new OrderRow(order));
+                if (selectedNumber != null && order.OrderNumber == selectedNumber)
+                {
+                    list.SelectedIndex = position;
+                }
+            }
+            if (list.Items.Count > 0)
+            {
+                list.TopIndex = Math.Min(oldTopIndex, list.Items.Count - 1);
+            }
+            list.EndUpdate();
+
+            title.Text = stage + " (" + orders.Count + ")";
+        }
+
+        // =====================================================================
+        // Menu Items tab (A2)
+        // =====================================================================
         private void BuildMenuItemsTab(TabPage page)
         {
             // Two columns: the table card on the left (fills), the details card on the right (340 px).
