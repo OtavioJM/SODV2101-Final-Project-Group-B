@@ -10,19 +10,28 @@ namespace MenuMate
         {
             CartItem newItem = new CartItem();
             newItem.Item = item;
+            newItem.Quantity = 1;
 
-            foreach (CartItem Item in Items)
+            if(Items.Count == 0)
             {
-                if(newItem.Item.Name.Equals(Item.Item.Name))
+                Items.Add(newItem);
+            }
+            else
+            {
+                foreach (CartItem Item in Items.ToList())
                 {
-                    Item.Quantity++;
-                }
-                else
-                {
-                    Items.Add(newItem);
-                    newItem.Quantity = 1;
+                    if (newItem.Item.Equals(Item.Item))
+                    {
+                        Item.Quantity++;
+                        break;
+                    }
+                    else
+                    {
+                        Items.Add(newItem);
+                    }
                 }
             }
+            
         }
 
         // Remove the line whose item has the same Name.
