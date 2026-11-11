@@ -20,7 +20,7 @@ namespace MenuMate
             {
                 foreach (CartItem Item in Items.ToList())
                 {
-                    if (newItem.Item.Equals(Item.Item))
+                    if (newItem.Item.Name.Equals(Item.Item.Name))
                     {
                         Item.Quantity++;
                         break;
@@ -37,7 +37,7 @@ namespace MenuMate
         // Remove the line whose item has the same Name.
         public void RemoveItem(MenuItem item) 
         { 
-            foreach(CartItem Item in Items)
+            foreach(CartItem Item in Items.ToList())
             {
                 if(Item.Item.Name == item.Name)
                 {
@@ -49,7 +49,7 @@ namespace MenuMate
         // Set the quantity of that item. If qty is 0 or less, remove it.
         public void ChangeQuantity(MenuItem item, int qty) 
         { 
-            foreach(CartItem Item in Items)
+            foreach(CartItem Item in Items.ToList())
             {
                 if(Item.Item.Name == item.Name)
                 {
