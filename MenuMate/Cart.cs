@@ -23,13 +23,10 @@ namespace MenuMate
                     if (newItem.Item.Name.Equals(Item.Item.Name))
                     {
                         Item.Quantity++;
-                        break;
-                    }
-                    else
-                    {
-                        Items.Add(newItem);
+                        return;
                     }
                 }
+                Items.Add(newItem);
             }
             
         }
