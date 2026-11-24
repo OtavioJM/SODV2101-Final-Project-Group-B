@@ -34,7 +34,6 @@
             lblGreet = new Label();
             lblSeparate = new Label();
             lblMenuMate = new Label();
-            lblTODO = new Label();
             pnlCategories = new Panel();
             btnDesserts = new Button();
             btnFood = new Button();
@@ -54,7 +53,6 @@
             lblSubtotal = new Label();
             pnlHeader.SuspendLayout();
             pnlCategories.SuspendLayout();
-            flwPnlYourOrder.SuspendLayout();
             pnlYourOrder.SuspendLayout();
             SuspendLayout();
             // 
@@ -133,15 +131,6 @@
             lblMenuMate.Text = "MenuMate";
             lblMenuMate.TextAlign = ContentAlignment.MiddleCenter;
             // 
-            // lblTODO
-            // 
-            lblTODO.AutoSize = true;
-            lblTODO.Location = new Point(3, 0);
-            lblTODO.Name = "lblTODO";
-            lblTODO.Size = new Size(49, 20);
-            lblTODO.TabIndex = 1;
-            lblTODO.Text = "TODO";
-            // 
             // pnlCategories
             // 
             pnlCategories.Controls.Add(btnDesserts);
@@ -210,7 +199,6 @@
             // flwPnlYourOrder
             // 
             flwPnlYourOrder.AutoScroll = true;
-            flwPnlYourOrder.Controls.Add(lblTODO);
             flwPnlYourOrder.Location = new Point(0, 42);
             flwPnlYourOrder.Name = "flwPnlYourOrder";
             flwPnlYourOrder.Size = new Size(300, 412);
@@ -353,8 +341,6 @@
             pnlHeader.ResumeLayout(false);
             pnlHeader.PerformLayout();
             pnlCategories.ResumeLayout(false);
-            flwPnlYourOrder.ResumeLayout(false);
-            flwPnlYourOrder.PerformLayout();
             pnlYourOrder.ResumeLayout(false);
             pnlYourOrder.PerformLayout();
             ResumeLayout(false);
@@ -374,7 +360,6 @@
         private Button btnDrinks;
         private Button btnDesserts;
         private Button btnFood;
-        private Label lblTODO;
         private Label lblYourOrder;
         private FlowLayoutPanel flwPnlYourOrder;
         private Panel pnlYourOrder;
