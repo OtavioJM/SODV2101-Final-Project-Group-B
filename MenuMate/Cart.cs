@@ -1,7 +1,7 @@
 namespace MenuMate
 {
     // The customer's order before checkout.
-    public class Cart
+    public class Cart ()
     {
         public List<CartItem> Items { get; set; } = new List<CartItem>();
 
@@ -50,7 +50,7 @@ namespace MenuMate
             {
                 if(Item.Item.Name == item.Name)
                 {
-                    Item.Quantity = qty;
+                    Item.Quantity += qty;
                     if(Item.Quantity <= 0)
                     {
                         Items.Remove(Item);
