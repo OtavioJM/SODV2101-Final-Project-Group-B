@@ -94,7 +94,7 @@ namespace MenuMate
                 itemCard.ItemPrice = $"${item.Price}";
                 if(File.Exists(Path.Combine(AppContext.BaseDirectory, "images", item.Name + ".png")))
                 {
-                    itemCard.Image = Image.FromFile(Path.Combine(AppContext.BaseDirectory, "images", item.Name + ".png")));
+                    itemCard.Image = Image.FromFile(Path.Combine(AppContext.BaseDirectory, "images", item.Name + ".png"));
                 }
                 flwPnlMenu.Controls.Add(itemCard);
                 itemCard.Click += (sender, e) => itemCard_Click(sender, e, itemCard.ItemName);
