@@ -92,7 +92,10 @@ namespace MenuMate
                 ItemCard itemCard = new ItemCard();
                 itemCard.ItemName = item.Name;
                 itemCard.ItemPrice = $"${item.Price}";
-                itemCard.Image = Image.FromFile($"images/{item.Name}.png");
+                if(File.Exists(Path.Combine(AppContext.BaseDirectory, "images", item.Name + ".png")))
+                {
+                    itemCard.Image = Image.FromFile(Path.Combine(AppContext.BaseDirectory, "images", item.Name + ".png")));
+                }
                 flwPnlMenu.Controls.Add(itemCard);
                 itemCard.Click += (sender, e) => itemCard_Click(sender, e, itemCard.ItemName);
                 itemCard.picBoxItemImg.Click += (sender, e) => itemCard_Click(sender, e, itemCard.ItemName);
@@ -166,7 +169,7 @@ namespace MenuMate
                         catch (IOException ex)
                         {
                             MessageBox.Show("We couldn't place your order. Please try again.", $"Something went wrong while loading our existing orders", MessageBoxButtons.OK);
-                            throw;
+                            return;
                         }
 
                         TrackerForm tracker = new TrackerForm(order.OrderNumber);
@@ -179,7 +182,7 @@ namespace MenuMate
                     catch (IOException ex)
                     {
                         MessageBox.Show("We couldn't place your order. Please try again.", $"Something went wrong while saving your order", MessageBoxButtons.OK);
-                        throw;
+                        return;
                     }
                     return;
                 }
