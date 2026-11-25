@@ -42,6 +42,7 @@
             lblYourOrder = new Label();
             flwPnlYourOrder = new FlowLayoutPanel();
             pnlYourOrder = new Panel();
+            lblNoItems = new Label();
             btnCheckout = new Button();
             rbTakeaway = new RadioButton();
             rbDineIn = new RadioButton();
@@ -199,13 +200,14 @@
             // flwPnlYourOrder
             // 
             flwPnlYourOrder.AutoScroll = true;
-            flwPnlYourOrder.Location = new Point(0, 42);
+            flwPnlYourOrder.Location = new Point(0, 61);
             flwPnlYourOrder.Name = "flwPnlYourOrder";
-            flwPnlYourOrder.Size = new Size(300, 412);
+            flwPnlYourOrder.Size = new Size(300, 393);
             flwPnlYourOrder.TabIndex = 1;
             // 
             // pnlYourOrder
             // 
+            pnlYourOrder.Controls.Add(lblNoItems);
             pnlYourOrder.Controls.Add(btnCheckout);
             pnlYourOrder.Controls.Add(rbTakeaway);
             pnlYourOrder.Controls.Add(rbDineIn);
@@ -222,6 +224,17 @@
             pnlYourOrder.Name = "pnlYourOrder";
             pnlYourOrder.Size = new Size(300, 553);
             pnlYourOrder.TabIndex = 2;
+            // 
+            // lblNoItems
+            // 
+            lblNoItems.BackColor = Color.FromArgb(47, 107, 79);
+            lblNoItems.Font = new Font("Segoe UI Semibold", 10.2F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            lblNoItems.ForeColor = Color.Red;
+            lblNoItems.Location = new Point(0, 39);
+            lblNoItems.Name = "lblNoItems";
+            lblNoItems.Size = new Size(300, 24);
+            lblNoItems.TabIndex = 11;
+            lblNoItems.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // btnCheckout
             // 
@@ -247,7 +260,6 @@
             rbTakeaway.TabIndex = 9;
             rbTakeaway.Text = "Takeaway";
             rbTakeaway.UseVisualStyleBackColor = true;
-            rbTakeaway.CheckedChanged += rbTakeaway_CheckedChanged;
             // 
             // rbDineIn
             // 
@@ -261,7 +273,6 @@
             rbDineIn.TabStop = true;
             rbDineIn.Text = "Dine In";
             rbDineIn.UseVisualStyleBackColor = true;
-            rbDineIn.CheckedChanged += rbDineIn_CheckedChanged;
             // 
             // lblTotalVal
             // 
@@ -372,5 +383,6 @@
         private RadioButton rbTakeaway;
         private RadioButton rbDineIn;
         private Button btnCheckout;
+        private Label lblNoItems;
     }
 }

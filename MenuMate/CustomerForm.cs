@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 
 namespace MenuMate
 {
@@ -34,7 +35,6 @@ namespace MenuMate
         }
         private void RefreshCart()
         {
-            // TODO
             foreach (var items in CustomerCart.Items)
             {
                 Debug.WriteLine($"{items.Item.Name} - {items.Quantity}");
@@ -102,6 +102,7 @@ namespace MenuMate
         }
         private void itemCard_Click(object sender, EventArgs e, string ItemName)
         {
+            lblNoItems.Text = "";
             foreach (var item in dataManager.LoadMenu())
             {
                 if (item.Name == ItemName)
@@ -114,17 +115,76 @@ namespace MenuMate
 
         private void btnCheckout_Click(object sender, EventArgs e)
         {
-            //TODO
-        }
+            if (CustomerCart.Items.Count <= 0)
+            {
+                lblNoItems.Text = "Your cart is empty!";
+                return;
+            }
+            else
+            {
+                lblNoItems.Text = "";
+                DialogResult result = MessageBox.Show($"Place your order? Your total is ${CustomerCart.GetTotal()}. Stop if you aren't ready.", "Finalize your order", MessageBoxButtons.YesNo);
+                if (result == DialogResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    try
+                    {
+                        var orders = dataManager.LoadOrders();
+                        var kitchen = new Kitchen { Orders = orders };
+                        int wait = kitchen.EstimateWaitMinutes(CustomerCart);
+                        Debug.WriteLine($"This order will be ready in {wait} minutes");
+                        Order order = new Order();
+                        if (orders.Count == 0)
+                        {
+                            order.OrderNumber = 1001;
+                        }
+                        else
+                        {
+                            order.OrderNumber = orders.Max(n => n.OrderNumber) + 1;
+                        }
+                        order.CustomerName = currentUser.Username;
+                        order.Date = DateTime.Now;
+                        if (rbDineIn.Checked)
+                        {
+                            order.Type = "Dine-in";
+                        }
+                        else
+                        {
+                            order.Type = "Takeaway";
+                        }
+                        order.ReadyTime = order.Date.AddMinutes(wait);
+                        order.Items = new List<CartItem>(CustomerCart.Items);
+                        order.Total = CustomerCart.GetTotal();
+                        orders.Add(order);
+                        try
+                        {
+                            dataManager.SaveOrders(orders);
+                        }
+                        catch (IOException ex)
+                        {
+                            MessageBox.Show("We couldn't place your order. Please try again.", $"Something went wrong while loading our existing orders", MessageBoxButtons.OK);
+                            throw;
+                        }
 
-        private void rbDineIn_CheckedChanged(object sender, EventArgs e)
-        {
-            //TODO
-        }
+                        TrackerForm tracker = new TrackerForm(order.OrderNumber);
+                        tracker.Show();
 
-        private void rbTakeaway_CheckedChanged(object sender, EventArgs e)
-        {
-            //TODO
+                        CustomerCart = new Cart();
+                        RefreshCart();
+                        rbDineIn.Checked = true;
+                    }
+                    catch (IOException ex)
+                    {
+                        MessageBox.Show("We couldn't place your order. Please try again.", $"Something went wrong while saving your order", MessageBoxButtons.OK);
+                        throw;
+                    }
+                    return;
+                }
+
+            }
         }
 
         private void btnLogOut_Click(object sender, EventArgs e)
